@@ -9,6 +9,7 @@ import {
 } from "../services/url.service"
 import isValidUrl from "../utils/isValidUrl"
 import isValidAlias from "../utils/isValidAlias"
+import clickQueue from "../queues/click.queue"
 
 export const createShortUrl = async (req: Request, res: Response) => {
   try {
@@ -70,6 +71,7 @@ export const redirectToOriginalUrl = async (
         message: "Short URL not found"
       })
     }
+    
 
     // Extract metadata
     const ip =(req.headers["x-forwarded-for"] as string)?.split(",")[0] || 
@@ -78,7 +80,12 @@ export const redirectToOriginalUrl = async (
     const referrer = req.headers["referer"]
 
     // Log click
-    await logClickService(url.id, ip, userAgent, referrer as string)
+    await clickQueue.add("log-click", {
+      urlId: url.id,
+      ip,
+      userAgent,
+      referrer: referrer || null,
+    });
 
     return res.redirect(url.original_url)
   } catch (error) {

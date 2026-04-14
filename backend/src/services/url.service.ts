@@ -1,5 +1,6 @@
 import pool from "../config/db"
 import generateShortCode from "../utils/generateShortCode"
+import redis from "../config/redis"
 
 export const createShortUrlService = async (
   originalUrl: string,
@@ -49,12 +50,33 @@ export const createShortUrlService = async (
 }
 
 export const getOriginalUrlService = async (shortCode: string) => {
+  const cached = await redis.get(shortCode);
+
+  if (cached) {
+    console.log("CACHE HIT");
+    return JSON.parse(cached);
+  }
+
   const result = await pool.query(
     "SELECT * FROM urls WHERE short_code = $1 AND is_active = true",
     [shortCode]
   )
+  if(result.rows.length==0){
+    return null
+  }
+  const url=result.rows[0]
 
-  return result.rows[0]
+  await redis.set(
+    shortCode,
+    JSON.stringify({
+      id: url.id,
+      original_url: url.original_url,
+    }),
+    "EX",
+    3600,
+  ); 
+
+  return url
 }
 
 export const logClickService = async (
