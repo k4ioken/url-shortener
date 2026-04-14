@@ -1,10 +1,14 @@
 import { Pool } from "pg"
 
+const useSsl = process.env.DATABASE_SSL === "true"
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  ssl: useSsl
+    ? {
+        rejectUnauthorized: false
+      }
+    : undefined
 })
 
 export default pool
